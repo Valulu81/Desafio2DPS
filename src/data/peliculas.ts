@@ -1,0 +1,58 @@
+import { Pelicula } from "../types/pelicula";
+
+export const peliculas: Pelicula[] = [
+    {
+        id: 1,
+        codigo: "p1",
+        nombre: "Avengers: Endgame",
+        genero: "Acción",
+        duracion: 180,
+        clasificacion: "B15",
+        funciones: ["f1", "f2", "f3"],
+        precio: 6.5,
+        estado: "Disponible",
+        imagen: "https://m.media-amazon.com/images/M/MV5BMTc5MDE2ODcwNV5BMl5BanBnXkFtZTgwMzI2NzQ2NzM@._V1_FMjpg_UX1000_.jpg",
+        descripcion: "Los Vengadores se reúnen una vez más para revertir las acciones de Thanos.",
+    },
+    {
+        id: 2,
+        codigo: "p2",
+        nombre: "The Lion King",
+        genero: "Animación",
+        duracion: 120,
+        clasificacion: "A",
+        funciones: ["f4", "f5"],
+        precio: 5.0,
+        estado: "Disponible",
+        imagen: "https://m.media-amazon.com/images/M/MV5BMjIwMjE1Nzc4NV5BMl5BanBnXkFtZTgwNDg4OTA1NzM@._V1_.jpg",
+        descripcion: "Simba debe asumir su lugar como rey tras la muerte de su padre.",
+    },
+    {
+        id: 3,
+        codigo: "p3",
+        nombre: "Batman Rising",
+        genero: "Acción",
+        duracion: 140,
+        clasificacion: "B15",
+        funciones: ["f6"],
+        precio: 6.0,
+        estado: "No disponible",
+        imagen: "https://m.media-amazon.com/images/M/MV5BMTk4ODQzNDY3Ml5BMl5BanBnXkFtZTcwODA0NTM4Nw@@._V1_FMjpg_UX1000_.jpg",
+        descripcion: "Batman enfrenta una nueva amenaza en Gotham City.",
+    },
+    {
+        id: 4,
+        codigo: "p4",
+        nombre: "The Nun",
+        genero: "Terror",
+        duracion: 96,
+        clasificacion: "C18",
+        funciones: ["f7", "f8"],
+        precio: 5.5,
+        estado: "Disponible",
+        imagen: "https://m.media-amazon.com/images/M/MV5BMjM3NzQ5NDcxOF5BMl5BanBnXkFtZTgwNzM4MTQ5NTM@._V1_.jpg",
+        descripcion: "Una monja investiga una serie de sucesos sobrenaturales.",
+    },
+];
+
+
