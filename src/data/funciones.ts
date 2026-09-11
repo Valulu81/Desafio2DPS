@@ -1,3 +1,23 @@
+import { Funcion } from "@/types/funcion";
+import { Asiento } from "@/types/asiento";
+
+const generarAsientos = (filas: number, columnas: number) => {
+    const asientos = [];
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    for (let f = 0; f < filas; f++) {
+        for (let c = 1; c <= columnas; c++) {
+            asientos.push({
+                id: `${letras[f]}${c}`,
+                fila: letras[f],
+                numero: c,
+                estado: (Math.random() > 0.8 ? 'ocupado' : 'libre') as Asiento['estado']
+            });
+        }
+    }
+    return asientos;
+};
+
 export const funciones = [
     {
         id: "f1",

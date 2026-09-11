@@ -1,106 +1,210 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
+    FlatList, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform
+} from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { theme } from '../components/theme';
+import { Ionicons } from '@expo/vector-icons';
 
+import { funciones } from '../data/funciones';
+import { salas } from '../data/salas';
+import { peliculas } from '../data/peliculas';
+import { Asiento as TipoAsiento } from '../types/asiento';
+import Asiento from '../components/Asiento';
 
-const ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-const SEATS_PER_ROW = 8;
-const OCCUPIED_SEATS = ['A5', 'A6', 'B3', 'C1', 'F6'];
+export default function MapaAsientosScreen() {
+    const route = useRoute<any>();
+    const navigation = useNavigation();
+    const { funcionId } = route.params;
 
-export default function SeleccionAsientos() {
-    const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+    const funcionActual = funciones.find(f => f.id === funcionId);
+    const salaActual = salas.find(s => s.id === funcionActual?.salaId);
+    const peliculaActual = peliculas.find(p => p.funciones?.includes(funcionId));
 
-    const toggleSeat = (seatId: string) => {
-        if (OCCUPIED_SEATS.includes(seatId)) return;
-        setSelectedSeats(prev =>
-            prev.includes(seatId) ? prev.filter(s => s !== seatId) : [...prev, seatId]
+    const [asientos, setAsientos] = useState<TipoAsiento[]>([]);
+    const [clienteNombre, setClienteNombre] = useState('');
+    const [clienteEmail, setClienteEmail] = useState('');
+    const [clienteTelefono, setClienteTelefono] = useState('');
+
+    const letrasFilas = Array.from({ length: salaActual?.filas || 0 }, (_, i) => String.fromCharCode(65 + i));
+
+    useEffect(() => {
+        if (!salaActual || !funcionActual) return;
+
+        if (funcionActual.asientos && funcionActual.asientos.length > 0) {
+            setAsientos(funcionActual.asientos);
+            return;
+        }
+
+        const asientosIniciales: TipoAsiento[] = letrasFilas.flatMap((fila) =>
+            Array.from({ length: salaActual.columnas }).map((_, j) => ({
+                id: `${fila}${j + 1}`,
+                fila: fila,
+                numero: j + 1,
+                estado: 'libre'
+            }))
         );
+
+        setAsientos(asientosIniciales);
+    }, [funcionActual, salaActual]);
+
+    const toggleSeleccion = (id: string) => {
+        setAsientos(prev => prev.map(a => {
+            if (a.id !== id || a.estado === 'ocupado') return a;
+            return { ...a, estado: a.estado === 'libre' ? 'seleccionado' : 'libre' };
+        }));
     };
+
+    const confirmarReserva = () => {
+        const seleccionados = asientos.filter(a => a.estado === 'seleccionado');
+
+        if (seleccionados.length === 0) return Alert.alert('Error', 'Debes seleccionar al menos un asiento.');
+        if (clienteNombre.trim().length < 3) return Alert.alert('Error', 'El nombre debe tener al menos 3 caracteres.');
+
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!regexEmail.test(clienteEmail)) return Alert.alert('Error', 'Ingresa un email válido.');
+
+        const regexTelefono = /^\d{8,15}$/;
+        if (!regexTelefono.test(clienteTelefono.replace(/[\s\-()]/g, ''))) return Alert.alert('Error', 'Teléfono inválido.');
+
+        const asientosActualizados = asientos.map(a =>
+            a.estado === 'seleccionado' ? { ...a, estado: 'ocupado' as const } : a
+        );
+
+        setAsientos(asientosActualizados);
+        Alert.alert('¡Éxito!', 'Reserva confirmada con éxito');
+        setClienteNombre('');
+        setClienteEmail('');
+        setClienteTelefono('');
+    };
+
+    if (!salaActual || !funcionActual) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Text style={styles.textoCentrado}>Datos no encontrados</Text>
+            </SafeAreaView>
+        );
+    }
+
+    const seleccionadosCount = asientos.filter(a => a.estado === 'seleccionado').length;
+    const precioTotal = seleccionadosCount * (peliculaActual?.precio ?? 0);
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Información de la función */}
-            <View style={styles.headerInfo}>
-                <Text style={styles.movieTitle}>Duna: Parte Dos</Text>
-                <Text style={styles.metaData}>Sala 1 • Hoy, 19:30 hrs</Text>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.scrollArea}>
-                {/* Arco de la Pantalla */}
-                <View style={styles.screenContainer}>
-                    <View style={styles.screenArc} />
-                    <Text style={styles.screenText}>PANTALLA</Text>
-                </View>
-
-                {/* Matriz de Asientos */}
-                <View style={styles.gridContainer}>
-                    {ROWS.map(row => (
-                        <View key={row} style={styles.row}>
-                            <Text style={styles.rowLabel}>{row}</Text>
-                            <View style={styles.seatsContainer}>
-                                {Array.from({ length: SEATS_PER_ROW }).map((_, i) => {
-                                    const seatNum = i + 1;
-                                    const seatId = `${row}${seatNum}`;
-                                    const isOccupied = OCCUPIED_SEATS.includes(seatId);
-                                    const isSelected = selectedSeats.includes(seatId);
-                                    const isAisle = seatNum === 4; // Pasillo central
-
-                                    return (
-                                        <React.Fragment key={seatId}>
-                                            <TouchableOpacity
-                                                disabled={isOccupied}
-                                                onPress={() => toggleSeat(seatId)}
-                                                style={[
-                                                    styles.seat,
-                                                    isOccupied && styles.seatOccupied,
-                                                    isSelected && styles.seatSelected
-                                                ]}
-                                            />
-                                            {isAisle && <View style={styles.aisle} />}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </View>
-                            <Text style={styles.rowLabel}>{row}</Text>
-                        </View>
-                    ))}
-                </View>
-            </ScrollView>
-
-            {/* Dock de Checkout Inferior */}
-            <View style={styles.checkoutDock}>
-                <View>
-                    <Text style={styles.checkoutTotal}>${selectedSeats.length * 160} MXN</Text>
-                    <Text style={styles.checkoutSub}>{selectedSeats.length} Boletos Seleccionados</Text>
-                </View>
-                <TouchableOpacity style={styles.payButton}>
-                    <Text style={styles.payButtonText}>Continuar</Text>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
                 </TouchableOpacity>
+                <View>
+                    <Text style={styles.headerTitle}>{peliculaActual?.nombre}</Text>
+                    <Text style={styles.headerSubtitle}>{salaActual.nombre} - {funcionActual.hora}</Text>
+                </View>
+                <View style={{ width: 40 }} />
             </View>
+
+
+            {/* Cambiamos el behavior a 'height' para Android y agregamos más padding */}
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 120 }} // Más espacio para poder hacer scroll por encima del teclado
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.pantallaContainer}>
+                        <View style={styles.pantallaArco} />
+                        <Text style={styles.pantallaTexto}>PANTALLA</Text>
+                    </View>
+
+                    <View style={styles.mapaContainer}>
+                        <View style={styles.mapaLayout}>
+                            {/* Columna Izquierda: Letras */}
+                            <View style={styles.letrasColumn}>
+                                {letrasFilas.map(letra => (
+                                    <View key={letra} style={styles.letraBox}>
+                                        <Text style={styles.letraTexto}>{letra}</Text>
+                                    </View>
+                                ))}
+                            </View>
+
+                            {/* Centro: Cuadrícula */}
+                            <FlatList
+                                data={asientos}
+                                keyExtractor={(item) => item.id}
+                                numColumns={salaActual.columnas}
+                                key={salaActual.columnas}
+                                scrollEnabled={false}
+                                renderItem={({ item }) => (
+                                    <Asiento item={item} onPress={() => toggleSeleccion(item.id)} />
+                                )}
+                            />
+
+                            {/* Columna Derecha: Bloque fantasma para equilibrar el centro */}
+                            <View style={styles.espaciadorDerecho} />
+                        </View>
+                    </View>
+
+
+                    <View style={styles.leyendaContainer}>
+                        <View style={styles.leyendaItem}><View style={[styles.leyendaColor, styles.colorLibre]} /><Text style={styles.leyendaTexto}>Libre</Text></View>
+                        <View style={styles.leyendaItem}><View style={[styles.leyendaColor, styles.colorSeleccionado]} /><Text style={styles.leyendaTexto}>Selección</Text></View>
+                        <View style={styles.leyendaItem}><View style={[styles.leyendaColor, styles.colorOcupado]} /><Text style={styles.leyendaTexto}>Ocupado</Text></View>
+                    </View>
+
+                    <View style={styles.resumenCard}>
+                        <Text style={styles.resumenTitle}>Resumen de selección</Text>
+                        <Text style={styles.resumenTexto}>Asientos: <Text style={styles.resumenBold}>{seleccionadosCount}</Text></Text>
+                        <Text style={styles.resumenTexto}>Total a pagar: <Text style={styles.resumenBold}>${precioTotal.toFixed(2)}</Text></Text>
+
+                        <View style={styles.formContainer}>
+                            <TextInput style={styles.input} placeholder="Nombre" placeholderTextColor={theme.colors.onSurfaceVariant} value={clienteNombre} onChangeText={setClienteNombre} />
+                            <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor={theme.colors.onSurfaceVariant} value={clienteEmail} onChangeText={setClienteEmail} keyboardType="email-address" />
+                            <TextInput style={styles.input} placeholder="Teléfono" placeholderTextColor={theme.colors.onSurfaceVariant} value={clienteTelefono} onChangeText={setClienteTelefono} keyboardType="phone-pad" />
+                        </View>
+
+                        <TouchableOpacity style={styles.btnConfirmar} onPress={confirmarReserva}>
+                            <Text style={styles.btnConfirmarText}>Confirmar Reserva</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.colors.surface },
-    headerInfo: { padding: theme.spacing.edge },
-    movieTitle: { color: theme.colors.onSurface, fontFamily: theme.fonts.headline, fontSize: 22 },
-    metaData: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.body, fontSize: 14, marginTop: 4 },
-    scrollArea: { alignItems: 'center', paddingBottom: 100 },
-    screenContainer: { alignItems: 'center', marginBottom: theme.spacing.lg, width: '80%' },
-    screenArc: { width: '100%', height: 40, borderTopWidth: 4, borderTopColor: theme.colors.primary, borderTopLeftRadius: 150, borderTopRightRadius: 150, opacity: 0.8 },
-    screenText: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.mono, fontSize: 10, marginTop: -20, letterSpacing: 4 },
-    gridContainer: { gap: 12 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-    rowLabel: { color: theme.colors.outline, fontFamily: theme.fonts.mono, fontSize: 14, width: 20, textAlign: 'center' },
-    seatsContainer: { flexDirection: 'row', gap: 6 },
-    seat: { width: 28, height: 28, borderRadius: 6, backgroundColor: theme.colors.surfaceContainerHigh },
-    seatOccupied: { backgroundColor: theme.colors.surfaceContainerLow, opacity: 0.5 },
-    seatSelected: { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary, shadowOpacity: 0.8, shadowRadius: 8, elevation: 5 },
-    aisle: { width: 16 },
-    checkoutDock: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: theme.colors.surfaceContainerHigh, padding: theme.spacing.edge, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: theme.colors.surfaceContainer },
-    checkoutTotal: { color: theme.colors.onSurface, fontFamily: theme.fonts.display, fontSize: 24 },
-    checkoutSub: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.body, fontSize: 12 },
-    payButton: { backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 14, borderRadius: theme.radius.lg },
-    payButtonText: { color: theme.colors.onPrimary, fontFamily: theme.fonts.headline, fontSize: 16, fontWeight: 'bold' }
+    textoCentrado: { color: theme.colors.onSurface, textAlign: 'center', marginTop: 40 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.edge, borderBottomWidth: 1, borderBottomColor: theme.colors.surfaceContainerHigh },
+    backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surfaceContainerHigh, borderRadius: theme.radius.pill },
+    headerTitle: { color: theme.colors.onSurface, fontFamily: theme.fonts.headline, fontSize: 16, textAlign: 'center' },
+    headerSubtitle: { color: theme.colors.primary, fontFamily: theme.fonts.mono, fontSize: 12, textAlign: 'center', marginTop: 2 },
+    pantallaContainer: { alignItems: 'center', marginVertical: theme.spacing.lg },
+    pantallaArco: { width: '80%', height: 4, backgroundColor: theme.colors.primary, borderRadius: 2, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
+    pantallaTexto: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.mono, fontSize: 10, letterSpacing: 4, marginTop: 12 },
+    mapaContainer: { alignItems: 'center', width: '100%' },
+    mapaLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+    letrasColumn: { width: 30, alignItems: 'center' },
+    letraBox: { height: 34, marginVertical: 4, justifyContent: 'center', alignItems: 'center' },
+    letraTexto: { color: theme.colors.primary, fontFamily: theme.fonts.headline, fontSize: 16 },
+    leyendaContainer: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginVertical: 24 },
+    leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    leyendaColor: { width: 16, height: 16, borderRadius: 4 },
+    colorLibre: { backgroundColor: theme.colors.surfaceContainerHigh, borderWidth: 1, borderColor: theme.colors.onSurfaceVariant + '40' },
+    colorSeleccionado: { backgroundColor: theme.colors.primary },
+    colorOcupado: { backgroundColor: '#1a1d24', opacity: 0.5 },
+    leyendaTexto: { color: theme.colors.onSurfaceVariant, fontSize: 12 },
+    resumenCard: { backgroundColor: theme.colors.surfaceContainerLow, margin: theme.spacing.edge, padding: theme.spacing.md, borderRadius: theme.radius.lg },
+    resumenTitle: { color: theme.colors.onSurface, fontFamily: theme.fonts.headline, fontSize: 18, marginBottom: 12 },
+    resumenTexto: { color: theme.colors.onSurfaceVariant, marginBottom: 4 },
+    resumenBold: { color: theme.colors.onSurface, fontWeight: 'bold' },
+    formContainer: { marginTop: 16, gap: 12 },
+    input: { backgroundColor: theme.colors.surfaceContainerHigh, color: theme.colors.onSurface, padding: 12, borderRadius: theme.radius.sm },
+    btnConfirmar: { backgroundColor: theme.colors.primary, marginTop: 24, padding: 16, borderRadius: theme.radius.pill, alignItems: 'center' },
+    btnConfirmarText: { color: theme.colors.onPrimary, fontFamily: theme.fonts.headline, fontSize: 16 },
+    espaciadorDerecho: { width: 30 },
 });
