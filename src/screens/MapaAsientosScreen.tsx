@@ -131,20 +131,22 @@ export default function MapaAsientosScreen() {
                                 ))}
                             </View>
 
-                            {/* Centro: Cuadrícula */}
-                            <FlatList
-                                data={asientos}
-                                keyExtractor={(item) => item.id}
-                                numColumns={salaActual.columnas}
-                                key={salaActual.columnas}
-                                scrollEnabled={false}
-                                renderItem={({ item }) => (
-                                    <Asiento item={item} onPress={() => toggleSeleccion(item.id)} />
-                                )}
-                            />
-
-                            {/* Columna Derecha: Bloque fantasma para equilibrar el centro */}
-                            <View style={styles.espaciadorDerecho} />
+                            {/* Cuadrícula manual de asientos (Adiós FlatList) */}
+                            <View style={styles.gridAsientos}>
+                                {letrasFilas.map(letra => (
+                                    <View key={`fila-${letra}`} style={styles.filaAsientos}>
+                                        {asientos
+                                            .filter(a => a.fila === letra)
+                                            .map(item => (
+                                                <Asiento
+                                                    key={item.id}
+                                                    item={item}
+                                                    onPress={() => toggleSeleccion(item.id)}
+                                                />
+                                            ))}
+                                    </View>
+                                ))}
+                            </View>
                         </View>
                     </View>
 
@@ -186,12 +188,11 @@ const styles = StyleSheet.create({
     pantallaContainer: { alignItems: 'center', marginVertical: theme.spacing.lg },
     pantallaArco: { width: '80%', height: 4, backgroundColor: theme.colors.primary, borderRadius: 2, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
     pantallaTexto: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.mono, fontSize: 10, letterSpacing: 4, marginTop: 12 },
-    mapaContainer: { alignItems: 'center', width: '100%' },
-    mapaLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-    letrasColumn: { width: 30, alignItems: 'center' },
-    letraBox: { height: 34, marginVertical: 4, justifyContent: 'center', alignItems: 'center' },
-    letraTexto: { color: theme.colors.primary, fontFamily: theme.fonts.headline, fontSize: 16 },
-    leyendaContainer: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginVertical: 24 },
+    mapaContainer: { alignItems: 'center', width: '100%' }, 
+    mapaLayout: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    letrasColumn: { marginRight: 8, alignItems: 'center' },
+    letraBox: { height: 34, marginVertical: 4, justifyContent: 'center', alignItems: 'center', width: 24 }, 
+    letraTexto: { color: theme.colors.primary, fontFamily: theme.fonts.headline, fontSize: 16 },    leyendaContainer: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginVertical: 24 },
     leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     leyendaColor: { width: 16, height: 16, borderRadius: 4 },
     colorLibre: { backgroundColor: theme.colors.surfaceContainerHigh, borderWidth: 1, borderColor: theme.colors.onSurfaceVariant + '40' },
@@ -207,4 +208,6 @@ const styles = StyleSheet.create({
     btnConfirmar: { backgroundColor: theme.colors.primary, marginTop: 24, padding: 16, borderRadius: theme.radius.pill, alignItems: 'center' },
     btnConfirmarText: { color: theme.colors.onPrimary, fontFamily: theme.fonts.headline, fontSize: 16 },
     espaciadorDerecho: { width: 30 },
+    gridAsientos: { flexDirection: 'column' },
+    filaAsientos: { flexDirection: 'row' },
 });
