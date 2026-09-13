@@ -7,18 +7,22 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { theme } from '../components/theme';
 import { Ionicons } from '@expo/vector-icons';
 
-import { funciones } from '../data/funciones';
+import { useAppSelector, useAppDispatch } from '../redux/hooks';
+import { guardarAsientosFuncion } from '../redux/slices/funcionesSlice';
 import { salas } from '../data/salas';
 import { peliculas } from '../data/peliculas';
 import { Asiento as TipoAsiento } from '../types/asiento';
 import Asiento from '../components/Asiento';
+import { agregarReserva } from '../redux/slices/reservasSlice';
 
 export default function MapaAsientosScreen() {
     const route = useRoute<any>();
     const navigation = useNavigation();
+    const dispatch = useAppDispatch();
     const { funcionId } = route.params;
 
-    const funcionActual = funciones.find(f => f.id === funcionId);
+    const funcionesRedux = useAppSelector(state => state.funciones);
+    const funcionActual = funcionesRedux.find(f => f.id === funcionId);
     const salaActual = salas.find(s => s.id === funcionActual?.salaId);
     const peliculaActual = peliculas.find(p => p.funciones?.includes(funcionId));
 
@@ -67,12 +71,28 @@ export default function MapaAsientosScreen() {
 
         const regexTelefono = /^\d{8,15}$/;
         if (!regexTelefono.test(clienteTelefono.replace(/[\s\-()]/g, ''))) return Alert.alert('Error', 'Teléfono inválido.');
-
         const asientosActualizados = asientos.map(a =>
-            a.estado === 'seleccionado' ? { ...a, estado: 'ocupado' as const } : a
-        );
+                    a.estado === 'seleccionado' ? { ...a, estado: 'ocupado' as const } : a
+                );
+                setAsientos(asientosActualizados);
+                dispatch(guardarAsientosFuncion({ funcionId, asientos: asientosActualizados }));
 
-        setAsientos(asientosActualizados);
+        const codigoGenerado = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 4).toUpperCase();
+
+        dispatch(agregarReserva({
+            id: `R-${Date.now()}`,
+            nombre: clienteNombre,
+            email: clienteEmail,
+            pelicula: peliculaActual?.nombre ?? 'Película',
+            hora: funcionActual.hora,
+            boletos: seleccionadosCount,
+            monto: precioTotal,
+            sala: salaActual.nombre,
+            asientos: seleccionados.map(a => a.id),
+            codigo: codigoGenerado,
+            imagen: peliculaActual?.imagen,
+        }));
+
         Alert.alert('¡Éxito!', 'Reserva confirmada con éxito');
         setClienteNombre('');
         setClienteEmail('');
@@ -104,7 +124,7 @@ export default function MapaAsientosScreen() {
             </View>
 
 
-            {/* Cambiamos el behavior a 'height' para Android y agregamos más padding */}
+
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -112,7 +132,7 @@ export default function MapaAsientosScreen() {
             >
                 <ScrollView
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 120 }} // Más espacio para poder hacer scroll por encima del teclado
+                    contentContainerStyle={{ paddingBottom: 120 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.pantallaContainer}>
@@ -122,7 +142,6 @@ export default function MapaAsientosScreen() {
 
                     <View style={styles.mapaContainer}>
                         <View style={styles.mapaLayout}>
-                            {/* Columna Izquierda: Letras */}
                             <View style={styles.letrasColumn}>
                                 {letrasFilas.map(letra => (
                                     <View key={letra} style={styles.letraBox}>
@@ -131,7 +150,7 @@ export default function MapaAsientosScreen() {
                                 ))}
                             </View>
 
-                            {/* Cuadrícula manual de asientos (Adiós FlatList) */}
+
                             <View style={styles.gridAsientos}>
                                 {letrasFilas.map(letra => (
                                     <View key={`fila-${letra}`} style={styles.filaAsientos}>

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
-// IMPORTACIÓN CORREGIDA:
 import { theme } from '../components/theme';
 import Buscador from '../components/Buscador';
 import Filtros from '../components/Filtros';

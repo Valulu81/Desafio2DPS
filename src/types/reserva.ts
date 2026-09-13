@@ -7,4 +7,7 @@ export interface Reservas {
     boletos: number;
     monto: number;
     sala: string;
+    asientos?: string[];
+    codigo?: string;
+    imagen?: string;
 }

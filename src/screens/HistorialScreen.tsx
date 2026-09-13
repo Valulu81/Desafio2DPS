@@ -2,8 +2,13 @@ import React from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../components/theme';
+import { useAppSelector } from '../redux/hooks';
+import { Reservas } from '../types/reserva';
+import QRCode from 'react-native-qrcode-svg';
 
-export default function BoletosScreen() {
+export default function HistorialScreen() {
+    const reservas = useAppSelector(state => state.reservas.lista);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -15,114 +20,132 @@ export default function BoletosScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* Banner de Celebración */}
-                <View style={styles.celebrationBanner}>
-                    <View style={styles.iconCircle}>
-                        <Ionicons name="checkmark-circle" size={24} color={theme.colors.onPrimary} />
+                {reservas.length === 0 && (
+                    <View style={styles.celebrationBanner}>
+                        <View style={styles.bannerTextContainer}>
+                            <Text style={styles.bannerTitle}>Aún no tienes boletos</Text>
+                            <Text style={styles.bannerBody}>Cuando confirmes una reserva, aparecerá aquí.</Text>
+                        </View>
                     </View>
-                    <View style={styles.bannerTextContainer}>
-                        <Text style={styles.bannerSubtitle}>OPERACIÓN EXITOSA</Text>
-                        <Text style={styles.bannerTitle}>¡Reserva Confirmada!</Text>
-                        <Text style={styles.bannerBody}>Disfruta la magia de tu función cinematográfica.</Text>
-                    </View>
-                </View>
+                )}
 
-                {/* Píldora de Estado */}
-                <View style={styles.statusPill}>
-                    <View style={styles.statusDotContainer}>
-                        <View style={styles.statusDot} />
-                        <Text style={styles.statusText}>Estado: Boleto Activo / No Canjeado</Text>
-                    </View>
-                </View>
+                {reservas.map((item: Reservas) => (
+                    <React.Fragment key={item.id}>
+                        <View style={styles.celebrationBanner}>
+                            <View style={styles.iconCircle}>
+                                <Ionicons name="checkmark-circle" size={24} color={theme.colors.onPrimary} />
+                            </View>
+                            <View style={styles.bannerTextContainer}>
+                                <Text style={styles.bannerSubtitle}>OPERACIÓN EXITOSA</Text>
+                                <Text style={styles.bannerTitle}>¡Reserva Confirmada!</Text>
+                                <Text style={styles.bannerBody}>Disfruta la magia de tu función cinematográfica.</Text>
+                            </View>
+                        </View>
 
-                {/* Tarjeta del Boleto */}
-                <View style={styles.ticketCard}>
-                    {/* Cabecera con Imagen */}
-                    <View style={styles.ticketImageContainer}>
-                        <Image
-                            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDQ9u71TYllg6pLyhvzCpExcwoGJ_zQwndY_xeFx_KryVIitbUo_Cg4zuG15RxeEn5cag6FnvphaxLBxCVFsiDVLL2Qd4lmXSA-ME8Mu_yVi4p1Qk3scDoAPvX-CkwgtznaCZ7oWyIIh9_ALX6zejRtnZ2dnBl18eb9gqni29JhXXVjgWOBRHrYYXQpRJgJGCwWwS1Va5VowIuHkeUSX_ZUBsCNh8juuzlw0m9w2a7pbKxls1e-wzz0MQ' }}
-                            style={styles.ticketImage}
-                        />
-                        <View style={styles.imageOverlay}>
-                            <View style={styles.badgeRow}>
-                                <View style={styles.badgeDark}>
-                                    <Text style={styles.badgeTextSecondary}>IMAX LÁSER</Text>
+
+                        <View style={styles.statusPill}>
+                            <View style={styles.statusDotContainer}>
+                                <View style={styles.statusDot} />
+                                <Text style={styles.statusText}>Estado: Boleto Activo / No Canjeado</Text>
+                            </View>
+                        </View>
+
+                        {/* Tarjeta del Boleto */}
+                        <View style={styles.ticketCard}>
+                            {/* Cabecera con Imagen */}
+                            <View style={styles.ticketImageContainer}>
+                                <Image
+                                    source={{ uri: item.imagen || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDQ9u71TYllg6pLyhvzCpExcwoGJ_zQwndY_xeFx_KryVIitbUo_Cg4zuG15RxeEn5cag6FnvphaxLBxCVFsiDVLL2Qd4lmXSA-ME8Mu_yVi4p1Qk3scDoAPvX-CkwgtznaCZ7oWyIIh9_ALX6zejRtnZ2dnBl18eb9gqni29JhXXVjgWOBRHrYYXQpRJgJGCwWwS1Va5VowIuHkeUSX_ZUBsCNh8juuzlw0m9w2a7pbKxls1e-wzz0MQ' }}
+                                    style={styles.ticketImage}
+                                />
+                                <View style={styles.imageOverlay}>
+                                    <View style={styles.badgeRow}>
+                                        <View style={styles.badgeDark}>
+                                            <Text style={styles.badgeTextSecondary}>{item.sala}</Text>
+                                        </View>
+                                        <View style={styles.badgePrimary}>
+                                            <Text style={styles.badgeTextPrimary}>{item.boletos} BOLETO(S)</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.movieDetailsOverlay}>
+                                        <Text style={styles.movieSubtitle}>FUNCIÓN CONFIRMADA</Text>
+                                        <Text style={styles.movieTitle}>{item.pelicula}</Text>
+                                    </View>
                                 </View>
-                                <View style={styles.badgePrimary}>
-                                    <Text style={styles.badgeTextPrimary}>DOLBY ATMOS</Text>
+                            </View>
+
+                            {/* Cuadrícula de Información */}
+                            <View style={styles.infoGrid}>
+                                <View style={styles.infoCell}>
+                                    <Text style={styles.infoLabel}>HORARIO</Text>
+                                    <Text style={styles.infoValue}>{item.hora}</Text>
+                                    <Text style={styles.infoSubValueSecondary}>{item.sala}</Text>
+                                </View>
+                                <View style={styles.infoCell}>
+                                    <Text style={styles.infoLabel}>CLIENTE</Text>
+                                    <Text style={styles.infoValue}>{item.nombre}</Text>
+                                    <Text style={styles.infoSubValueTertiary}>{item.email}</Text>
+                                </View>
+                                <View style={styles.infoCell}>
+                                    <Text style={styles.infoLabel}>BUTACAS ASIGNADAS</Text>
+                                    <Text style={styles.infoValuePrimary}>
+                                        {item.asientos && item.asientos.length > 0 ? item.asientos.join(', ') : '—'}
+                                    </Text>
+                                    <Text style={styles.infoSubValue}>{item.boletos} Boleto(s)</Text>
+                                </View>
+                                <View style={styles.infoCell}>
+                                    <Text style={styles.infoLabel}>TOTAL PAGADO</Text>
+                                    <View style={styles.iconRow}>
+                                        <Ionicons name="cash" size={14} color={theme.colors.secondary} />
+                                        <Text style={styles.infoValue}>${item.monto.toFixed(2)}</Text>
+                                    </View>
                                 </View>
                             </View>
-                            <View style={styles.movieDetailsOverlay}>
-                                <Text style={styles.movieSubtitle}>ESTRENO EXCLUSIVO</Text>
-                                <Text style={styles.movieTitle}>Duna: Parte Dos</Text>
+
+                            {/* Línea de Perforación (Tear Line) */}
+                            <View style={styles.tearLineContainer}>
+                                <View style={styles.notchLeft} />
+                                <View style={styles.dashedLine} />
+                                <View style={styles.notchRight} />
+                            </View>
+
+                            {/* Sección del Código QR */}
+                            <View style={styles.qrSection}>
+                                <View style={styles.qrHeader}>
+                                    <View style={styles.iconRow}>
+                                        <Ionicons name="sunny" size={14} color={theme.colors.onSurfaceVariant} />
+                                        <Text style={styles.qrHeaderText}>Sube tu brillo</Text>
+                                    </View>
+                                    <View style={styles.iconRow}>
+                                        <Ionicons name="lock-closed" size={14} color={theme.colors.tertiary} />
+                                        <Text style={styles.qrHeaderSecure}>Cifrado Dinámico</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.qrBox}>
+                                    <QRCode
+                                        value={JSON.stringify({ reservaId: item.id, codigo: item.codigo ?? item.id })}
+                                        size={140}
+                                        color="#000000"
+                                        backgroundColor="#ffffff"
+                                    />
+                                </View>
+
+                                <Text style={styles.qrInstructions}>
+                                    Muestra este código QR al ingresar a la sala. El personal del cine lo escaneará para validar tu acceso.
+                                </Text>
+
+                                <View style={styles.authCodeContainer}>
+                                    <Text style={styles.authCodeLabel}>Código de Autorización:</Text>
+                                    <TouchableOpacity style={styles.iconRow}>
+                                        <Text style={styles.authCodeValue}>{item.codigo ?? item.id}</Text>
+                                        <Ionicons name="copy-outline" size={14} color={theme.colors.tertiary} />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
-                    </View>
-
-                    {/* Cuadrícula de Información */}
-                    <View style={styles.infoGrid}>
-                        <View style={styles.infoCell}>
-                            <Text style={styles.infoLabel}>FECHA & HORARIO</Text>
-                            <Text style={styles.infoValue}>Hoy, 24 Octubre</Text>
-                            <Text style={styles.infoSubValueSecondary}>19:30 hrs</Text>
-                        </View>
-                        <View style={styles.infoCell}>
-                            <Text style={styles.infoLabel}>UBICACIÓN & SALA</Text>
-                            <Text style={styles.infoValue}>Lumina Plaza Real</Text>
-                            <Text style={styles.infoSubValueTertiary}>Sala 1 (Planta Alta)</Text>
-                        </View>
-                        <View style={styles.infoCell}>
-                            <Text style={styles.infoLabel}>BUTACAS ASIGNADAS</Text>
-                            <Text style={styles.infoValuePrimary}>Fila F · 05, 06</Text>
-                            <Text style={styles.infoSubValue}>2 Boletos Adulto VIP</Text>
-                        </View>
-                        <View style={styles.infoCell}>
-                            <Text style={styles.infoLabel}>ACCESO ESPECIAL</Text>
-                            <View style={styles.iconRow}>
-                                <Ionicons name="fast-food" size={14} color={theme.colors.secondary} />
-                                <Text style={styles.infoValue}>Fast-Track</Text>
-                            </View>
-                            <Text style={styles.infoSubValue}>Dulcería Express Incluida</Text>
-                        </View>
-                    </View>
-
-                    {/* Línea de Perforación (Tear Line) */}
-                    <View style={styles.tearLineContainer}>
-                        <View style={styles.notchLeft} />
-                        <View style={styles.dashedLine} />
-                        <View style={styles.notchRight} />
-                    </View>
-
-                    {/* Sección del Código QR */}
-                    <View style={styles.qrSection}>
-                        <View style={styles.qrHeader}>
-                            <View style={styles.iconRow}>
-                                <Ionicons name="sunny" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={styles.qrHeaderText}>Sube tu brillo</Text>
-                            </View>
-                            <View style={styles.iconRow}>
-                                <Ionicons name="lock-closed" size={14} color={theme.colors.tertiary} />
-                                <Text style={styles.qrHeaderSecure}>Cifrado Dinámico</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.qrBox}>
-                            <Ionicons name="qr-code" size={120} color={theme.colors.surfaceContainerLow} />
-                        </View>
-
-                        <Text style={styles.qrInstructions}>
-                            Muestra este código QR al ingresar a la sala. El personal del cine lo escaneará para validar tu acceso.
-                        </Text>
-
-                        <View style={styles.authCodeContainer}>
-                            <Text style={styles.authCodeLabel}>Código de Autorización:</Text>
-                            <TouchableOpacity style={styles.iconRow}>
-                                <Text style={styles.authCodeValue}>8924-DX</Text>
-                                <Ionicons name="copy-outline" size={14} color={theme.colors.tertiary} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                    </React.Fragment>
+                ))}
 
             </ScrollView>
         </SafeAreaView>

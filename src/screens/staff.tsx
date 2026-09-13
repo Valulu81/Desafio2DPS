@@ -3,8 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Sta
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import {useFocusEffect} from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { theme } from '../components/theme';
+import { useAppSelector } from '../redux/hooks';
+import { salas } from '../data/salas';
+import { BarChart } from 'react-native-gifted-charts';
 
 export default function StaffScreen() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -12,6 +15,54 @@ export default function StaffScreen() {
     const [permission, requestPermission] = useCameraPermissions();
     const [torch, setTorch] = useState(false);
     const [manualCode, setManualCode] = useState('');
+
+    // Dashboard
+    const peliculasRedux = useAppSelector(state => state.peliculas);
+    const funcionesRedux = useAppSelector(state => state.funciones);
+    const reservasRedux = useAppSelector(state => state.reservas.lista);
+    const [chartContainerWidth, setChartContainerWidth] = useState(0);
+
+    const totalPeliculas = peliculasRedux.length;
+    const totalFunciones = funcionesRedux.length;
+    const totalBoletosVendidos = reservasRedux.reduce((sum, r) => sum + r.boletos, 0);
+    const ingresosGenerados = reservasRedux.reduce((sum, r) => sum + r.monto, 0);
+
+    let totalAsientosDisponibles = 0;
+    let totalAsientosOcupados = 0;
+
+    funcionesRedux.forEach(f => {
+        const sala = salas.find(s => s.id === f.salaId);
+        if (!sala) return;
+        const capacidad = sala.filas * sala.columnas;
+
+        if (f.asientos && f.asientos.length > 0) {
+            const ocupados = f.asientos.filter(a => a.estado === 'ocupado').length;
+            totalAsientosOcupados += ocupados;
+            totalAsientosDisponibles += (capacidad - ocupados);
+        } else {
+            totalAsientosDisponibles += capacidad;
+        }
+    });
+
+    // Película más reservada (por cantidad de boletos vendidos)
+    const ingresosPorPelicula: Record<string, number> = {};
+    reservasRedux.forEach(r => {
+        ingresosPorPelicula[r.pelicula] = (ingresosPorPelicula[r.pelicula] || 0) + r.monto;
+    });
+
+    const peliculaMasReservada = Object.entries(
+        reservasRedux.reduce((acc: Record<string, number>, r) => {
+            acc[r.pelicula] = (acc[r.pelicula] || 0) + r.boletos;
+            return acc;
+        }, {})
+    ).sort((a, b) => b[1] - a[1])[0];
+
+    // Data del gráfico de barras (ingresos por película)
+    const dataGrafico = Object.entries(ingresosPorPelicula).map(([nombre, monto]) => ({
+        value: monto,
+        label: nombre.length > 8 ? nombre.substring(0, 8) + '…' : nombre,
+        frontColor: theme.colors.primary,
+    }));
 
     useFocusEffect(
         useCallback(() => {
@@ -22,7 +73,8 @@ export default function StaffScreen() {
             };
         }, [])
     );
-    // aqui ta la magia, aqui es donde se autentica 
+
+    // aqui ta la magia, aqui es donde se autentica
     const authenticateStaff = async () => {
         try {
             const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -120,6 +172,7 @@ export default function StaffScreen() {
                         <Ionicons name="qr-code-outline" size={16} color={activeTab === 'scanner' ? theme.colors.onPrimary : theme.colors.onSurfaceVariant} />
                         <Text style={[styles.tabText, activeTab === 'scanner' && styles.tabTextActive]}>Validador QR</Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                         style={[styles.tabBtn, activeTab === 'dashboard' && styles.tabBtnActive]}
                         onPress={() => setActiveTab('dashboard')}
@@ -128,6 +181,128 @@ export default function StaffScreen() {
                         <Text style={[styles.tabText, activeTab === 'dashboard' && styles.tabTextActive]}>Dashboard</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Dashboard */}
+                {activeTab === 'dashboard' && (
+                    <View style={styles.dashboardSection}>
+                        <View style={styles.mainMetricCard}>
+                            <View style={styles.mainMetricIcon}>
+                                <Ionicons name="cash-outline" size={24} color={theme.colors.onPrimary} />
+                            </View>
+                            <View>
+                                <Text style={styles.metricLabel}>Ingresos Generados</Text>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.metricValueLarge}>${ingresosGenerados.toFixed(2)}</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.grid2Col}>
+                            <View style={styles.gridCard}>
+                                <View style={styles.gridCardHeader}>
+                                    <Text style={styles.gridCardLabel}>Películas</Text>
+                                    <Ionicons name="film" size={18} color={theme.colors.tertiary} />
+                                </View>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.gridCardValue}>{totalPeliculas}</Text>
+                                    <Text style={styles.gridCardSub}>en cartelera</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.gridCard}>
+                                <View style={styles.gridCardHeader}>
+                                    <Text style={styles.gridCardLabel}>Funciones</Text>
+                                    <Ionicons name="time" size={18} color={theme.colors.secondary} />
+                                </View>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.gridCardValue}>{totalFunciones}</Text>
+                                    <Text style={styles.gridCardSub}>totales</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.gridCard}>
+                                <View style={styles.gridCardHeader}>
+                                    <Text style={styles.gridCardLabel}>Boletos</Text>
+                                    <Ionicons name="ticket" size={18} color={theme.colors.primary} />
+                                </View>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.gridCardValue}>{totalBoletosVendidos}</Text>
+                                    <Text style={styles.gridCardSub}>vendidos</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.gridCard}>
+                                <View style={styles.gridCardHeader}>
+                                    <Text style={styles.gridCardLabel}>Asientos</Text>
+                                    <Ionicons name="body" size={18} color={theme.colors.tertiary} />
+                                </View>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.gridCardValue}>{totalAsientosDisponibles}</Text>
+                                    <Text style={styles.gridCardSub}>disponibles</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.gridCard}>
+                                <View style={styles.gridCardHeader}>
+                                    <Text style={styles.gridCardLabel}>Ocupados</Text>
+                                    <Ionicons name="warning" size={18} color={theme.colors.secondary} />
+                                </View>
+                                <View style={styles.metricRow}>
+                                    <Text style={styles.gridCardValue}>{totalAsientosOcupados}</Text>
+                                    <Text style={styles.gridCardSub}>ocupados</Text>
+                                </View>
+                            </View>
+
+                            {peliculaMasReservada && (
+                                <View style={styles.gridCard}>
+                                    <View style={styles.gridCardHeader}>
+                                        <Text style={styles.gridCardLabel}>Más reservada</Text>
+                                        <Ionicons name="trophy" size={18} color={theme.colors.tertiary} />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.gridCardValue} numberOfLines={1}>{peliculaMasReservada[0]}</Text>
+                                        <Text style={styles.gridCardSub}>{peliculaMasReservada[1]} boletos</Text>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Gráfico de Ingresos por Película */}
+                        <View
+                            style={styles.chartCard}
+                            onLayout={(event) => setChartContainerWidth(event.nativeEvent.layout.width)}
+                        >
+                            <View style={styles.gridCardHeader}>
+                                <Text style={styles.gridCardLabel}>Ingresos por película</Text>
+                                <Ionicons name="bar-chart" size={18} color={theme.colors.primary} />
+                            </View>
+
+                            {dataGrafico.length > 0 && chartContainerWidth > 0 ? (
+                                <BarChart
+                                    data={dataGrafico}
+                                    width={chartContainerWidth}
+                                    barWidth={28}
+                                    spacing={
+                                        dataGrafico.length > 1
+                                            ? (chartContainerWidth - (28 * dataGrafico.length)) / dataGrafico.length
+                                            : chartContainerWidth - 28
+                                    }
+                                    roundedTop
+                                    hideRules
+                                    xAxisThickness={0}
+                                    yAxisThickness={0}
+                                    yAxisTextStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                                    xAxisLabelTextStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 10 }}
+                                    noOfSections={4}
+                                    height={180}
+                                    disableScroll
+                                />
+                            ) : (
+                                <Text style={styles.gridCardSub}>Aún no hay ventas registradas</Text>
+                            )}
+                        </View>
+                    </View>
+                )}
 
                 {/* CONTENIDO: Escáner QR */}
                 {activeTab === 'scanner' && (
@@ -184,70 +359,6 @@ export default function StaffScreen() {
                             <TouchableOpacity style={styles.validateBtn} onPress={() => Alert.alert('Validando', manualCode)}>
                                 <Text style={styles.validateBtnText}>VALIDAR</Text>
                             </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-
-                {/* CONTENIDO: Dashboard de Estadísticas */}
-                {activeTab === 'dashboard' && (
-                    <View style={styles.dashboardSection}>
-                        <View style={styles.mainMetricCard}>
-                            <View style={styles.mainMetricIcon}>
-                                <Ionicons name="cash-outline" size={24} color={theme.colors.onPrimary} />
-                            </View>
-                            <View>
-                                <Text style={styles.metricLabel}>Ingresos Generados (Hoy)</Text>
-                                <View style={styles.metricRow}>
-                                    <Text style={styles.metricValueLarge}>$248,500</Text>
-                                    <Text style={styles.metricCurrency}>MXN</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.grid2Col}>
-                            <View style={styles.gridCard}>
-                                <View style={styles.gridCardHeader}>
-                                    <Text style={styles.gridCardLabel}>Películas</Text>
-                                    <Ionicons name="film" size={18} color={theme.colors.tertiary} />
-                                </View>
-                                <View style={styles.metricRow}>
-                                    <Text style={styles.gridCardValue}>14</Text>
-                                    <Text style={styles.gridCardSub}>en cartelera</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.gridCard}>
-                                <View style={styles.gridCardHeader}>
-                                    <Text style={styles.gridCardLabel}>Funciones</Text>
-                                    <Ionicons name="time" size={18} color={theme.colors.secondary} />
-                                </View>
-                                <View style={styles.metricRow}>
-                                    <Text style={styles.gridCardValue}>48</Text>
-                                    <Text style={styles.gridCardSub}>hoy</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.gridCard}>
-                                <View style={styles.gridCardHeader}>
-                                    <Text style={styles.gridCardLabel}>Boletos</Text>
-                                    <Ionicons name="ticket" size={18} color={theme.colors.primary} />
-                                </View>
-                                <View style={styles.metricRow}>
-                                    <Text style={styles.gridCardValue}>1,420</Text>
-                                    <Text style={styles.gridCardSub}>vendidos</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.gridCard}>
-                                <View style={styles.gridCardHeader}>
-                                    <Text style={styles.gridCardLabel}>Asientos</Text>
-                                    <Ionicons name="body" size={18} color={theme.colors.tertiary} />
-                                </View>
-                                <View style={styles.metricRow}>
-                                    <Text style={styles.gridCardValue}>380</Text>
-                                    <Text style={styles.gridCardSub}>disponibles</Text>
-                                </View>
-                            </View>
                         </View>
                     </View>
                 )}
@@ -319,5 +430,7 @@ const styles = StyleSheet.create({
     gridCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
     gridCardLabel: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.body, fontSize: 12 },
     gridCardValue: { color: theme.colors.onSurface, fontFamily: theme.fonts.display, fontSize: 20 },
-    gridCardSub: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.body, fontSize: 10 }
+    gridCardSub: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.body, fontSize: 10 },
+    chartCard: {width: '100%',backgroundColor: theme.colors.surfaceContainer, padding: theme.spacing.md,borderRadius: theme.radius.lg, overflow: 'hidden',
+    }
 });

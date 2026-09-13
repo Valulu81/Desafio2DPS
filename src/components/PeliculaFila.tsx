@@ -30,7 +30,7 @@ export default function PeliculaFila({ pelicula, onPressFuncion }: Props) {
                             style={styles.badge}
                             onPress={() => onPressFuncion(funcionId)}
                         >
-                            <Text style={styles.badgeText}>{funcionId}</Text>
+                            <Text style={styles.badgeText}>{`Función ${index + 1}`}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
