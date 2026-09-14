@@ -53,7 +53,7 @@ export default function FormularioPeliculaScreen() {
         setFormFunciones([...formFunciones, {
             id: `f${Date.now()}`,
             hora: '',
-            salaId: salas[0]?.id || 's1', // Asigna la primera sala real por defecto
+            salaId: salas[0]?.id || 's1', // Asigna la primera sala  por defecto
             asientos: []
         }]);
     };
@@ -240,7 +240,6 @@ export default function FormularioPeliculaScreen() {
                                         onChangeText={t => actualizarFuncion(index, 'hora', t)}
                                     />
                                     
-                                    {/* Selector visual de salas implementado aquí */}
                                     <View style={[styles.input, { flex: 1.5, padding: 0, height: 50, justifyContent: 'center' }]}>
                                         <Picker
                                             selectedValue={func.salaId}

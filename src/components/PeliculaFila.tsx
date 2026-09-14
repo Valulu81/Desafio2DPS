@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Pelicula } from '../types/pelicula';
 import { theme } from './theme';
-import { useAppSelector } from '../redux/hooks'; // Traemos el selector de Redux
+import { useAppSelector } from '../redux/hooks'; 
 
 interface Props {
     pelicula: Pelicula;
@@ -12,7 +12,6 @@ interface Props {
 export default function PeliculaFila({ pelicula, onPressFuncion }: Props) {
     const funcionesSeguras = pelicula.funciones || [];
 
-    // Leemos el estado global de funciones
     const funcionesGlobales = useAppSelector(state => state.funciones);
 
     return (
@@ -24,11 +23,11 @@ export default function PeliculaFila({ pelicula, onPressFuncion }: Props) {
                     <Text style={styles.title} numberOfLines={1}>{pelicula.nombre}</Text>
                     <Text style={styles.meta}>{pelicula.genero} • {pelicula.duracion} min</Text>
                     <Text style={styles.clasificacion}>{pelicula.clasificacion}</Text>
+                    <Text style={styles.estado}>{pelicula.estado}</Text>
                 </View>
 
                 <View style={styles.showtimeContainer}>
                     {funcionesSeguras.map((funcionId, index) => {
-                        // Buscamos la función en Redux
                         const funcionEncontrada = funcionesGlobales.find(f => f.id === funcionId);
 
                         return (
