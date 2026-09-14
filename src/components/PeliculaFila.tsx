@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Pelicula } from '../types/pelicula';
-import { theme } from './theme'; // Aquí está bien porque están en la misma carpeta
+import { theme } from './theme';
+import { useAppSelector } from '../redux/hooks'; // Traemos el selector de Redux
 
 interface Props {
     pelicula: Pelicula;
@@ -9,8 +10,10 @@ interface Props {
 }
 
 export default function PeliculaFila({ pelicula, onPressFuncion }: Props) {
-    // Blindaje: Si 'funciones' no viene definido, usamos un arreglo vacío
     const funcionesSeguras = pelicula.funciones || [];
+
+    // Leemos el estado global de funciones
+    const funcionesGlobales = useAppSelector(state => state.funciones);
 
     return (
         <View style={styles.card}>
@@ -24,15 +27,22 @@ export default function PeliculaFila({ pelicula, onPressFuncion }: Props) {
                 </View>
 
                 <View style={styles.showtimeContainer}>
-                    {funcionesSeguras.map((funcionId, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={styles.badge}
-                            onPress={() => onPressFuncion(funcionId)}
-                        >
-                            <Text style={styles.badgeText}>{`Función ${index + 1}`}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    {funcionesSeguras.map((funcionId, index) => {
+                        // Buscamos la función en Redux
+                        const funcionEncontrada = funcionesGlobales.find(f => f.id === funcionId);
+
+                        return (
+                            <TouchableOpacity
+                                key={index}
+                                style={styles.badge}
+                                onPress={() => onPressFuncion(funcionId)}
+                            >
+                                <Text style={styles.badgeText}>
+                                    {funcionEncontrada ? funcionEncontrada.hora : funcionId}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             </View>
         </View>
@@ -48,5 +58,6 @@ const styles = StyleSheet.create({
     clasificacion: { color: theme.colors.primary, fontFamily: theme.fonts.mono, fontSize: 10, marginTop: 6, textTransform: 'uppercase' },
     showtimeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
     badge: { backgroundColor: theme.colors.surfaceContainerHigh, paddingVertical: 6, paddingHorizontal: 12, borderRadius: theme.radius.sm },
-    badgeText: { color: theme.colors.onSurface, fontFamily: theme.fonts.mono, fontSize: 12 }
+    badgeText: { color: theme.colors.onSurface, fontFamily: theme.fonts.mono, fontSize: 12 },
+    estado: { color: theme.colors.secondary, fontFamily: theme.fonts.mono, fontSize: 10, marginTop: 6, textTransform: 'uppercase' },
 });

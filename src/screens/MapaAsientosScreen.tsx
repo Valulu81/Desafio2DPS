@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
-    FlatList, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform
+    TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { theme } from '../components/theme';
 import { Ionicons } from '@expo/vector-icons';
-
 import { useAppSelector, useAppDispatch } from '../redux/hooks';
 import { guardarAsientosFuncion } from '../redux/slices/funcionesSlice';
 import { salas } from '../data/salas';
-import { peliculas } from '../data/peliculas';
 import { Asiento as TipoAsiento } from '../types/asiento';
 import Asiento from '../components/Asiento';
 import { agregarReserva } from '../redux/slices/reservasSlice';
@@ -22,16 +20,30 @@ export default function MapaAsientosScreen() {
     const { funcionId } = route.params;
 
     const funcionesRedux = useAppSelector(state => state.funciones);
+    const peliculasRedux = useAppSelector(state => state.peliculas);
+
     const funcionActual = funcionesRedux.find(f => f.id === funcionId);
     const salaActual = salas.find(s => s.id === funcionActual?.salaId);
-    const peliculaActual = peliculas.find(p => p.funciones?.includes(funcionId));
+
+    const peliculaActual = peliculasRedux.find(p => p.funciones?.includes(funcionId));
 
     const [asientos, setAsientos] = useState<TipoAsiento[]>([]);
     const [clienteNombre, setClienteNombre] = useState('');
     const [clienteEmail, setClienteEmail] = useState('');
     const [clienteTelefono, setClienteTelefono] = useState('');
 
-    const letrasFilas = Array.from({ length: salaActual?.filas || 0 }, (_, i) => String.fromCharCode(65 + i));
+    const letrasFilas = useMemo(() => {
+        return Array.from({ length: salaActual?.filas || 0 }, (_, i) => String.fromCharCode(65 + i));
+    }, [salaActual?.filas]);
+
+    const asientosPorFila = useMemo(() => {
+        const agrupados: Record<string, TipoAsiento[]> = {};
+        letrasFilas.forEach(letra => agrupados[letra] = []);
+        asientos.forEach(a => {
+            if (agrupados[a.fila]) agrupados[a.fila].push(a);
+        });
+        return agrupados;
+    }, [asientos, letrasFilas]);
 
     useEffect(() => {
         if (!salaActual || !funcionActual) return;
@@ -51,7 +63,7 @@ export default function MapaAsientosScreen() {
         );
 
         setAsientos(asientosIniciales);
-    }, [funcionActual, salaActual]);
+    }, [funcionActual, salaActual, letrasFilas]);
 
     const toggleSeleccion = (id: string) => {
         setAsientos(prev => prev.map(a => {
@@ -61,6 +73,10 @@ export default function MapaAsientosScreen() {
     };
 
     const confirmarReserva = () => {
+        if (!funcionActual || !salaActual || !peliculaActual) {
+            return Alert.alert('Error', 'Faltan datos de la función o sala.');
+        }
+
         const seleccionados = asientos.filter(a => a.estado === 'seleccionado');
 
         if (seleccionados.length === 0) return Alert.alert('Error', 'Debes seleccionar al menos un asiento.');
@@ -71,11 +87,13 @@ export default function MapaAsientosScreen() {
 
         const regexTelefono = /^\d{8,15}$/;
         if (!regexTelefono.test(clienteTelefono.replace(/[\s\-()]/g, ''))) return Alert.alert('Error', 'Teléfono inválido.');
+
         const asientosActualizados = asientos.map(a =>
-                    a.estado === 'seleccionado' ? { ...a, estado: 'ocupado' as const } : a
-                );
-                setAsientos(asientosActualizados);
-                dispatch(guardarAsientosFuncion({ funcionId, asientos: asientosActualizados }));
+            a.estado === 'seleccionado' ? { ...a, estado: 'ocupado' as const } : a
+        );
+
+        setAsientos(asientosActualizados);
+        dispatch(guardarAsientosFuncion({ funcionId, asientos: asientosActualizados }));
 
         const codigoGenerado = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 4).toUpperCase();
 
@@ -83,14 +101,15 @@ export default function MapaAsientosScreen() {
             id: `R-${Date.now()}`,
             nombre: clienteNombre,
             email: clienteEmail,
-            pelicula: peliculaActual?.nombre ?? 'Película',
+            pelicula: peliculaActual.nombre,
             hora: funcionActual.hora,
-            boletos: seleccionadosCount,
-            monto: precioTotal,
+            boletos: seleccionados.length,
+            monto: seleccionados.length * peliculaActual.precio,
             sala: salaActual.nombre,
             asientos: seleccionados.map(a => a.id),
             codigo: codigoGenerado,
-            imagen: peliculaActual?.imagen,
+            imagen: peliculaActual.imagen,
+            canjeado: false
         }));
 
         Alert.alert('¡Éxito!', 'Reserva confirmada con éxito');
@@ -123,8 +142,6 @@ export default function MapaAsientosScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-
-
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -150,25 +167,21 @@ export default function MapaAsientosScreen() {
                                 ))}
                             </View>
 
-
                             <View style={styles.gridAsientos}>
                                 {letrasFilas.map(letra => (
                                     <View key={`fila-${letra}`} style={styles.filaAsientos}>
-                                        {asientos
-                                            .filter(a => a.fila === letra)
-                                            .map(item => (
-                                                <Asiento
-                                                    key={item.id}
-                                                    item={item}
-                                                    onPress={() => toggleSeleccion(item.id)}
-                                                />
-                                            ))}
+                                        {asientosPorFila[letra]?.map(item => (
+                                            <Asiento
+                                                key={item.id}
+                                                item={item}
+                                                onPress={() => toggleSeleccion(item.id)}
+                                            />
+                                        ))}
                                     </View>
                                 ))}
                             </View>
                         </View>
                     </View>
-
 
                     <View style={styles.leyendaContainer}>
                         <View style={styles.leyendaItem}><View style={[styles.leyendaColor, styles.colorLibre]} /><Text style={styles.leyendaTexto}>Libre</Text></View>
@@ -207,11 +220,12 @@ const styles = StyleSheet.create({
     pantallaContainer: { alignItems: 'center', marginVertical: theme.spacing.lg },
     pantallaArco: { width: '80%', height: 4, backgroundColor: theme.colors.primary, borderRadius: 2, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
     pantallaTexto: { color: theme.colors.onSurfaceVariant, fontFamily: theme.fonts.mono, fontSize: 10, letterSpacing: 4, marginTop: 12 },
-    mapaContainer: { alignItems: 'center', width: '100%' }, 
+    mapaContainer: { alignItems: 'center', width: '100%' },
     mapaLayout: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     letrasColumn: { marginRight: 8, alignItems: 'center' },
-    letraBox: { height: 34, marginVertical: 4, justifyContent: 'center', alignItems: 'center', width: 24 }, 
-    letraTexto: { color: theme.colors.primary, fontFamily: theme.fonts.headline, fontSize: 16 },    leyendaContainer: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginVertical: 24 },
+    letraBox: { height: 34, marginVertical: 4, justifyContent: 'center', alignItems: 'center', width: 24 },
+    letraTexto: { color: theme.colors.primary, fontFamily: theme.fonts.headline, fontSize: 16 },
+    leyendaContainer: { flexDirection: 'row', justifyContent: 'center', gap: 24, marginVertical: 24 },
     leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     leyendaColor: { width: 16, height: 16, borderRadius: 4 },
     colorLibre: { backgroundColor: theme.colors.surfaceContainerHigh, borderWidth: 1, borderColor: theme.colors.onSurfaceVariant + '40' },

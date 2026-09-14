@@ -8,12 +8,12 @@ import { theme } from '../components/theme';
 import PeliculasScreen from '../screens/PeliculasScreen';
 import HistorialScreen from '../screens/HistorialScreen';
 import DashboardScreen from '../screens/staff';
+import FormularioPeliculaScreen from '../screens/FormularioPeliculaScreen';
 import MapaAsientosScreen from '../screens/MapaAsientosScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-// 1. Configuramos las pestañas (Solo los 3 botones visibles)
 function TabNavigator() {
     return (
         <Tab.Navigator
@@ -62,6 +62,7 @@ export default function AppNavigator() {
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="MainTabs" component={TabNavigator} />
                 <Stack.Screen name="MapaAsientosScreen" component={MapaAsientosScreen} />
+                <Stack.Screen name="FormularioPeliculaScreen" component={FormularioPeliculaScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

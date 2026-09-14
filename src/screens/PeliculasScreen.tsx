@@ -4,26 +4,26 @@ import { theme } from '../components/theme';
 import Buscador from '../components/Buscador';
 import Filtros from '../components/Filtros';
 import PeliculaFila from '../components/PeliculaFila';
-
-import { peliculas } from '../data/peliculas';
+import { useAppSelector } from '../redux/hooks';
 
 export default function PeliculasScreen({ navigation }: any) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroActivo, setFiltroActivo] = useState('Todos');
 
-  // Blindaje: nos aseguramos de que 'peliculas' exista antes de mapear
+  // Leemos las películas desde Redux
+  const peliculasRedux = useAppSelector(state => state.peliculas);
+
   const generosUnicos = useMemo(() => {
-    const dataSegura = peliculas || [];
+    const dataSegura = peliculasRedux || [];
     const generos = dataSegura.map(p => p.genero);
     return ['Todos', ...new Set(generos)];
-  }, []);
+  }, [peliculasRedux]); // Se recalcula si agregas una peli con género nuevo
 
-  const peliculasFiltradas = (peliculas || []).filter((peli) => {
+  const peliculasFiltradas = (peliculasRedux || []).filter((peli) => {
     const coincideTexto = peli.nombre.toLowerCase().includes(busqueda.toLowerCase());
     const coincideGenero = filtroActivo === 'Todos' || peli.genero === filtroActivo;
     return coincideTexto && coincideGenero;
   });
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />

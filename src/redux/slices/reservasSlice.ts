@@ -1,46 +1,28 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Asiento } from "@/types/asiento";
 import { Reservas } from "@/types/reserva";
 
 interface ReservasState {
     lista: Reservas[];
 }
 
+// 1. Aquí vaciamos los datos de prueba de Matrix e Inception
 const initialState: ReservasState = {
-    lista: [
-        {
-            id: "r1",
-            nombre: "Valeria López",
-            email: "valeria@example.com",
-            pelicula: "Inception",
-            hora: "19:00",
-            boletos: 2,
-            monto: 14.00,
-            sala: "Sala 3"
-        },
-        {
-            id: "r2",
-            nombre: "Carlos Pérez",
-            email: "carlos@example.com",
-            pelicula: "Matrix",
-            hora: "21:30",
-            boletos: 3,
-            monto: 21.00,
-            sala: "Sala 5"
-        }
-    ]
+    lista: [] 
 };
-
 
 const reservasSlice = createSlice({
     name: "reservas",
     initialState,
     reducers: {
         agregarReserva: (state, action: PayloadAction<Reservas>) => {
-            state.lista.push(action.payload);
+            state.lista.push({ ...action.payload, canjeado: false });
         },
+        canjearBoleto: (state, action: PayloadAction<string>) => {
+            const reserva = state.lista.find(r => r.id === action.payload);
+            if (reserva) reserva.canjeado = true;
+        }
     },
 });
 
-export const { agregarReserva } = reservasSlice.actions;
+export const { agregarReserva, canjearBoleto } = reservasSlice.actions;
 export default reservasSlice.reducer;

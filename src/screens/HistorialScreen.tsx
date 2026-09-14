@@ -1,4 +1,6 @@
 import React from 'react';
+import * as Clipboard from 'expo-clipboard';
+import { Alert } from 'react-native';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../components/theme';
@@ -42,11 +44,12 @@ export default function HistorialScreen() {
                             </View>
                         </View>
 
-
                         <View style={styles.statusPill}>
                             <View style={styles.statusDotContainer}>
-                                <View style={styles.statusDot} />
-                                <Text style={styles.statusText}>Estado: Boleto Activo / No Canjeado</Text>
+                                <View style={[styles.statusDot, { backgroundColor: item.canjeado ? theme.colors.outline : theme.colors.secondary }]} />
+                                <Text style={[styles.statusText, { color: item.canjeado ? theme.colors.outline : theme.colors.secondary }]}>
+                                    {item.canjeado ? 'Estado: Boleto Canjeado / Inactivo' : 'Estado: Boleto Activo / No Canjeado'}
+                                </Text>
                             </View>
                         </View>
 
@@ -137,7 +140,14 @@ export default function HistorialScreen() {
 
                                 <View style={styles.authCodeContainer}>
                                     <Text style={styles.authCodeLabel}>Código de Autorización:</Text>
-                                    <TouchableOpacity style={styles.iconRow}>
+                                    <TouchableOpacity
+                                        style={styles.iconRow}
+                                        onPress={async () => {
+                                            const codigo = item.codigo ?? item.id;
+                                            await Clipboard.setStringAsync(codigo);
+                                            Alert.alert('¡Copiado!', 'Código copiado al portapapeles.');
+                                        }}
+                                    >
                                         <Text style={styles.authCodeValue}>{item.codigo ?? item.id}</Text>
                                         <Ionicons name="copy-outline" size={14} color={theme.colors.tertiary} />
                                     </TouchableOpacity>
