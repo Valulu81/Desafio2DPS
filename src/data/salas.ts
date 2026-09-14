@@ -19,4 +19,24 @@ export const salas: Salas[] = [
         filas: 7,
         columnas: 6,
     },
+    {
+        id: "s4",
+        nombre: "Sala 4",
+        filas: 5,
+        columnas: 10,
+
+    },
+    {
+        id: "s5",
+        nombre: "Sala 5",
+        filas: 6,
+        columnas: 7,
+    },
+    {
+        id: "s6",
+        nombre: "Sala 6",
+        filas: 8,
+        columnas: 6,
+    }
+
 ];

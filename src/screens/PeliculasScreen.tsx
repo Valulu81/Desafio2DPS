@@ -4,26 +4,37 @@ import { theme } from '../components/theme';
 import Buscador from '../components/Buscador';
 import Filtros from '../components/Filtros';
 import PeliculaFila from '../components/PeliculaFila';
-import { useAppSelector } from '../redux/hooks';
+import { useAppSelector } from '../redux/hooks'; 
 
 export default function PeliculasScreen({ navigation }: any) {
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroActivo, setFiltroActivo] = useState('Todos');
+    const [busqueda, setBusqueda] = useState('');
+    const [filtroActivo, setFiltroActivo] = useState('Todos');
 
-  // Leemos las películas desde Redux
-  const peliculasRedux = useAppSelector(state => state.peliculas);
+    const peliculasRedux = useAppSelector(state => state.peliculas);
 
-  const generosUnicos = useMemo(() => {
-    const dataSegura = peliculasRedux || [];
-    const generos = dataSegura.map(p => p.genero);
-    return ['Todos', ...new Set(generos)];
-  }, [peliculasRedux]); // Se recalcula si agregas una peli con género nuevo
+    const generosUnicos = useMemo(() => {
+        const dataSegura = peliculasRedux || [];
+        const generos = dataSegura.map(p => {
+            const generoLimpio = p.genero.trim();
+            return generoLimpio.charAt(0).toUpperCase() + generoLimpio.slice(1).toLowerCase();
+        });
+        
+        return ['Todos', ...new Set(generos)];
+    }, [peliculasRedux]);
 
-  const peliculasFiltradas = (peliculasRedux || []).filter((peli) => {
-    const coincideTexto = peli.nombre.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideGenero = filtroActivo === 'Todos' || peli.genero === filtroActivo;
-    return coincideTexto && coincideGenero;
-  });
+    const peliculasFiltradas = useMemo(() => {
+        const dataSegura = peliculasRedux || [];
+        return dataSegura.filter((peli) => {
+            const coincideTexto = peli.nombre.toLowerCase().includes(busqueda.toLowerCase());
+            
+            const generoPeliLimpio = peli.genero.trim().toLowerCase();
+            const filtroLimpio = filtroActivo.trim().toLowerCase();
+            const coincideGenero = filtroActivo === 'Todos' || generoPeliLimpio === filtroLimpio;
+            
+            return coincideTexto && coincideGenero;
+        });
+    }, [peliculasRedux, busqueda, filtroActivo]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />

@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Image, TextInput, Switch, Modal, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { theme } from '../components/theme';
 import { Pelicula } from '../types/pelicula';
 import { Funcion } from '../types/funcion';
+import { salas } from '../data/salas';
+
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
 import { addPelicula, editPelicula, deletePelicula } from '../redux/slices/peliculasSlice';
 import { setFunciones } from '../redux/slices/funcionesSlice';
@@ -22,7 +25,6 @@ export default function FormularioPeliculaScreen() {
         nombre: '', genero: '', duracion: '', clasificacion: '', precio: '', imagen: '', estado: true
     });
 
-    // Estado para gestionar los horarios dentro del modal
     const [formFunciones, setFormFunciones] = useState<Funcion[]>([]);
 
     const abrirFormulario = (pelicula?: Pelicula) => {
@@ -37,7 +39,6 @@ export default function FormularioPeliculaScreen() {
                 imagen: pelicula.imagen,
                 estado: pelicula.estado === 'Disponible'
             });
-            // Cargar las funciones asociadas a esta película
             const funcionesPeli = funcionesRedux.filter(f => pelicula.funciones?.includes(f.id));
             setFormFunciones(funcionesPeli);
         } else {
@@ -48,12 +49,11 @@ export default function FormularioPeliculaScreen() {
         setModalVisible(true);
     };
 
-    // Manejo local de funciones en el formulario
     const agregarFuncion = () => {
         setFormFunciones([...formFunciones, {
-            id: `f${Date.now()}`, // Generamos un ID único temporal
+            id: `f${Date.now()}`,
             hora: '',
-            salaId: 's1', // Por defecto Sala 1
+            salaId: salas[0]?.id || 's1', // Asigna la primera sala real por defecto
             asientos: []
         }]);
     };
@@ -73,7 +73,6 @@ export default function FormularioPeliculaScreen() {
 
         const idsFuncionesActuales = formFunciones.map(f => f.id);
 
-        // 1. Guardar las funciones en el store global
         let nuevoArregloFunciones = [...funcionesRedux];
         formFunciones.forEach(fForm => {
             const existeIndex = nuevoArregloFunciones.findIndex(f => f.id === fForm.id);
@@ -85,7 +84,6 @@ export default function FormularioPeliculaScreen() {
         });
         dispatch(setFunciones(nuevoArregloFunciones));
 
-        // 2. Guardar la película
         if (editandoId) {
             dispatch(editPelicula({
                 id: editandoId,
@@ -182,7 +180,6 @@ export default function FormularioPeliculaScreen() {
                     </View>
 
                     <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-                        {/* Datos Básicos */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Nombre</Text>
                             <TextInput style={styles.input} placeholderTextColor={theme.colors.onSurfaceVariant} value={form.nombre} onChangeText={t => setForm({ ...form, nombre: t })} />
@@ -225,7 +222,6 @@ export default function FormularioPeliculaScreen() {
                             />
                         </View>
 
-                        {/* Gestión de Funciones / Horarios */}
                         <View style={styles.funcionesSection}>
                             <View style={styles.funcionesHeader}>
                                 <Text style={styles.label}>Horarios y Salas</Text>
@@ -237,19 +233,27 @@ export default function FormularioPeliculaScreen() {
                             {formFunciones.map((func, index) => (
                                 <View key={func.id} style={styles.funcionRow}>
                                     <TextInput
-                                        style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                                        style={[styles.input, { flex: 1, height: 50 }]}
                                         placeholder="Hora (Ej. 15:30)"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         value={func.hora}
                                         onChangeText={t => actualizarFuncion(index, 'hora', t)}
                                     />
-                                    <TextInput
-                                        style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                                        placeholder="ID Sala (Ej. S1)"
-                                        placeholderTextColor={theme.colors.onSurfaceVariant}
-                                        value={func.salaId}
-                                        onChangeText={t => actualizarFuncion(index, 'salaId', t)}
-                                    />
+                                    
+                                    {/* Selector visual de salas implementado aquí */}
+                                    <View style={[styles.input, { flex: 1.5, padding: 0, height: 50, justifyContent: 'center' }]}>
+                                        <Picker
+                                            selectedValue={func.salaId}
+                                            onValueChange={(itemValue) => actualizarFuncion(index, 'salaId', itemValue)}
+                                            style={{ color: theme.colors.onSurface }}
+                                            dropdownIconColor={theme.colors.primary}
+                                        >
+                                            {salas.map(sala => (
+                                                <Picker.Item key={sala.id} label={sala.nombre} value={sala.id} />
+                                            ))}
+                                        </Picker>
+                                    </View>
+
                                     <TouchableOpacity style={styles.btnDelete} onPress={() => eliminarFuncion(index)}>
                                         <Ionicons name="trash-outline" size={20} color="#ffb4ab" />
                                     </TouchableOpacity>
@@ -300,13 +304,13 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', gap: 12 },
     inputGroup: { gap: 6 },
     label: { color: theme.colors.onSurfaceVariant, fontSize: 11, fontFamily: theme.fonts.headline, textTransform: 'uppercase' },
-    input: { backgroundColor: theme.colors.surfaceContainerLow, color: theme.colors.onSurface, padding: 12, borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.surfaceContainerHigh },
+    input: { backgroundColor: theme.colors.surfaceContainerLow, color: theme.colors.onSurface, paddingHorizontal: 12, borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.surfaceContainerHigh },
     rowSwitch: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.colors.surfaceContainerLow, padding: 12, borderRadius: theme.radius.sm },
     funcionesSection: { marginTop: 8, padding: 12, backgroundColor: theme.colors.surfaceContainerLow, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.surfaceContainerHigh },
     funcionesHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     btnTextLight: { color: theme.colors.primary, fontSize: 12, fontFamily: theme.fonts.headline },
     funcionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    btnDelete: { padding: 8, backgroundColor: theme.colors.surfaceContainerHigh, borderRadius: theme.radius.sm },
+    btnDelete: { height: 50, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surfaceContainerHigh, borderRadius: theme.radius.sm },
     emptyText: { color: theme.colors.onSurfaceVariant, fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginVertical: 8 },
     btnGuardar: { backgroundColor: theme.colors.primary, padding: 16, borderRadius: theme.radius.pill, alignItems: 'center', marginTop: 12 },
     btnGuardarTexto: { color: theme.colors.onPrimary, fontFamily: theme.fonts.headline, fontSize: 16 }
