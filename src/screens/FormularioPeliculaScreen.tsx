@@ -69,7 +69,14 @@ export default function FormularioPeliculaScreen() {
     };
 
     const guardarPelicula = () => {
-        if (!form.nombre || !form.precio) return Alert.alert('Error', 'Nombre y precio son obligatorios');
+
+        if (!form.nombre.trim()) return Alert.alert('Error', 'El nombre es obligatorio');
+        if (!form.precio) return Alert.alert('Error', 'El precio es obligatorio');
+
+         const precioNumerico = parseFloat(form.precio);
+
+        if (isNaN(precioNumerico)) return Alert.alert('Error', 'El precio debe ser un número válido');
+        if (precioNumerico <= 0) return Alert.alert('Error', 'El precio debe ser mayor a cero');
 
         const idsFuncionesActuales = formFunciones.map(f => f.id);
 
